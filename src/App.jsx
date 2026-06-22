@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
-// Tipos de comida
-const tiposComida = ["Desayuno", "Comida", "Merienda", "Cena"];
+// Tipos de comida (solo Comida y Cena para el selector)
+const tiposComidaSelector = ["Comida", "Cena"];
+const todosTiposComida = ["Desayuno", "Comida", "Merienda", "Cena"];
 
-// Datos de recetas reales extraídos del PDF
+// Datos de recetas reales extraídas del PDF
 const recetasIniciales = [
   {
     id: 1,
@@ -174,10 +175,15 @@ const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 export default function App() {
   const [recetas, setRecetas] = useState(recetasIniciales);
-  const [planSemanal, setPlanSemanal] = useState({}); // { dia: { tipo: { receta, raciones } } }
+  const [planSemanal, setPlanSemanal] = useState({});
   const [listaCompra, setListaCompra] = useState([]);
+  const [pestanaActiva, setPestanaActiva] = useState("recetas"); // Estado para las pestañas
 
-  // Añadir receta al plan semanal para un tipo de comida específico
+  // Filtrar recetas por tipo (para el selector)
+  const recetasPorTipo = (tipo) => recetas.filter((receta) => receta.tipo === tipo);
+  const recetasComidaCena = recetas.filter(receta => receta.tipo === "Comida" || receta.tipo === "Cena");
+
+  // Añadir receta al plan semanal
   const añadirAlPlan = (dia, tipo, receta, raciones) => {
     setPlanSemanal((prev) => ({
       ...prev,
@@ -191,17 +197,14 @@ export default function App() {
   // Generar lista de la compra
   const generarListaCompra = () => {
     const ingredientesAgrupados = {};
-
     Object.values(planSemanal).forEach((planDia) => {
       Object.values(planDia).forEach((planTipo) => {
         const { receta, raciones } = planTipo;
         const factor = raciones / receta.raciones;
-
         receta.ingredientes.forEach((ingrediente) => {
           const clave = ingrediente.nombre;
           const cantidad = ingrediente.cantidad * factor;
           const unidad = ingrediente.unidad;
-
           if (ingredientesAgrupados[clave]) {
             ingredientesAgrupados[clave] = {
               ...ingredientesAgrupados[clave],
@@ -213,8 +216,8 @@ export default function App() {
         });
       });
     });
-
     setListaCompra(Object.values(ingredientesAgrupados));
+    setPestanaActiva("lista-compra"); // Cambia automáticamente a la pestaña de lista de la compra
   };
 
   // Marcar/desmarcar ingrediente como comprado
@@ -226,150 +229,173 @@ export default function App() {
     );
   };
 
-  // Filtrar recetas por tipo
-  const recetasPorTipo = (tipo) => recetas.filter((receta) => receta.tipo === tipo);
-
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <h1 className="text-2xl md:text-3xl font-bold text-center mb-6">Planificador de Recetas</h1>
 
-      {/* Sección de recetas */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl md:text-2xl font-semibold mb-4">Recetas Disponibles</h2>
-        {tiposComida.map((tipo) => (
-          <div key={tipo} className="mb-6">
-            <h3 className="text-lg font-medium mb-2 text-blue-600">{tipo}</h3>
-            <div className="grid grid-cols-1 gap-4">
-              {recetasPorTipo(tipo).map((receta) => (
-                <div key={receta.id} className="border p-4 rounded-lg bg-gray-50">
-                  <h4 className="text-lg font-medium">{receta.nombre}</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {receta.raciones} raciones | {receta.ingredientes.length} ingredientes
-                  </p>
-                  <div className="text-sm">
-                    <p className="font-medium">Ingredientes:</p>
-                    <ul className="list-disc pl-5">
-                      {receta.ingredientes.map((ing, i) => (
-                        <li key={i}>
-                          {ing.cantidad} {ing.unidad} {ing.nombre}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Planificador semanal */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl md:text-2xl font-semibold mb-4">Planificador Semanal</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border">
-            <thead>
-              <tr>
-                <th className="py-2 px-2 border text-sm">Día / Tipo</th>
-                {tiposComida.map((tipo) => (
-                  <th key={tipo} className="py-2 px-2 border text-sm">{tipo}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {diasSemana.map((dia) => (
-                <tr key={dia}>
-                  <td className="py-2 px-2 border font-medium text-sm">{dia}</td>
-                  {tiposComida.map((tipo) => (
-                    <td key={`${dia}-${tipo}`} className="py-2 px-2 border">
-                      <select
-                        className="w-full p-1 border rounded text-xs mb-1"
-                        onChange={(e) => {
-                          const recetaId = parseInt(e.target.value);
-                          if (recetaId) {
-                            const receta = recetas.find((r) => r.id === recetaId);
-                            añadirAlPlan(dia, tipo, receta, receta.raciones);
-                          }
-                        }}
-                      >
-                        <option value="">--</option>
-                        {recetasPorTipo(tipo).map((receta) => (
-                          <option key={receta.id} value={receta.id}>
-                            {receta.nombre}
-                          </option>
-                        ))}
-                      </select>
-                      {planSemanal[dia]?.[tipo] && (
-                        <div className="text-xs">
-                          <p className="font-medium">
-                            {planSemanal[dia][tipo].receta.nombre}
-                          </p>
-                          <input
-                            type="number"
-                            min="1"
-                            value={planSemanal[dia][tipo].raciones}
-                            onChange={(e) =>
-                              setPlanSemanal((prev) => ({
-                                ...prev,
-                                [dia]: {
-                                  ...prev[dia],
-                                  [tipo]: { ...prev[dia][tipo], raciones: parseInt(e.target.value) },
-                                },
-                              }))
-                            }
-                            className="w-full p-1 border rounded mt-1"
-                          />
-                          <p className="text-xs text-gray-500">raciones</p>
-                        </div>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Navegación por pestañas */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-white rounded-lg shadow p-1 flex">
+          <button
+            onClick={() => setPestanaActiva("recetas")}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${pestanaActiva === "recetas" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            Todas las Recetas
+          </button>
+          <button
+            onClick={() => setPestanaActiva("selector")}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${pestanaActiva === "selector" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            Selector de Comidas y Cenas
+          </button>
+          <button
+            onClick={() => setPestanaActiva("lista-compra")}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${pestanaActiva === "lista-compra" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+          >
+            Lista de la Compra
+          </button>
         </div>
-        <button
-          onClick={generarListaCompra}
-          className="mt-4 bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-sm"
-        >
-          Generar Lista de la Compra
-        </button>
       </div>
 
-      {/* Lista de la compra */}
-      {listaCompra.length > 0 && (
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4">Lista de la Compra</h2>
+      {/* Contenido según la pestaña activa */}
+      {pestanaActiva === "recetas" && (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">Todas las Recetas</h2>
+          {todosTiposComida.map((tipo) => (
+            <div key={tipo} className="mb-6">
+              <h3 className="text-lg font-medium mb-2 text-blue-600">{tipo}</h3>
+              <div className="grid grid-cols-1 gap-4">
+                {recetasPorTipo(tipo).map((receta) => (
+                  <div key={receta.id} className="border p-4 rounded-lg bg-gray-50">
+                    <h4 className="text-lg font-medium">{receta.nombre}</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {receta.raciones} raciones | {receta.ingredientes.length} ingredientes
+                    </p>
+                    <div className="text-sm">
+                      <p className="font-medium">Ingredientes:</p>
+                      <ul className="list-disc pl-5">
+                        {receta.ingredientes.map((ing, i) => (
+                          <li key={i}>{ing.cantidad} {ing.unidad} {ing.nombre}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {pestanaActiva === "selector" && (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">Selector de Comidas y Cenas</h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
+            <table className="min-w-full bg-white border">
               <thead>
                 <tr>
-                  <th className="py-2 px-2 border text-sm">Ingrediente</th>
-                  <th className="py-2 px-2 border text-sm">Cantidad</th>
-                  <th className="py-2 px-2 border text-sm">Comprado</th>
+                  <th className="py-2 px-2 border text-sm">Día / Tipo</th>
+                  {tiposComidaSelector.map((tipo) => (
+                    <th key={tipo} className="py-2 px-2 border text-sm">{tipo}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {listaCompra.map((item, index) => (
-                  <tr key={index} className={item.comprado ? "bg-green-50" : ""}>
-                    <td className="py-2 px-2 border text-sm">{item.nombre}</td>
-                    <td className="py-2 px-2 border text-sm">
-                      {item.cantidad.toFixed(2)} {item.unidad}
-                    </td>
-                    <td className="py-2 px-2 border text-center">
-                      <input
-                        type="checkbox"
-                        checked={item.comprado}
-                        onChange={() => toggleComprado(item.nombre)}
-                        className="h-4 w-4"
-                      />
-                    </td>
+                {diasSemana.map((dia) => (
+                  <tr key={dia}>
+                    <td className="py-2 px-2 border font-medium text-sm">{dia}</td>
+                    {tiposComidaSelector.map((tipo) => (
+                      <td key={`${dia}-${tipo}`} className="py-2 px-2 border">
+                        <select
+                          className="w-full p-1 border rounded text-xs mb-1"
+                          onChange={(e) => {
+                            const recetaId = parseInt(e.target.value);
+                            if (recetaId) {
+                              const receta = recetas.find((r) => r.id === recetaId);
+                              añadirAlPlan(dia, tipo, receta, receta.raciones);
+                            }
+                          }}
+                        >
+                          <option value="">--</option>
+                          {recetasPorTipo(tipo).map((receta) => (
+                            <option key={receta.id} value={receta.id}>
+                              {receta.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        {planSemanal[dia]?.[tipo] && (
+                          <div className="text-xs">
+                            <p className="font-medium">{planSemanal[dia][tipo].receta.nombre}</p>
+                            <input
+                              type="number"
+                              min="1"
+                              value={planSemanal[dia][tipo].raciones}
+                              onChange={(e) =>
+                                setPlanSemanal((prev) => ({
+                                  ...prev,
+                                  [dia]: {
+                                    ...prev[dia],
+                                    [tipo]: { ...prev[dia][tipo], raciones: parseInt(e.target.value) },
+                                  },
+                                }))
+                              }
+                              className="w-full p-1 border rounded mt-1"
+                            />
+                            <p className="text-xs text-gray-500">raciones</p>
+                          </div>
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <button
+            onClick={generarListaCompra}
+            className="mt-4 bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-sm"
+          >
+            Generar Lista de la Compra
+          </button>
+        </div>
+      )}
+
+      {pestanaActiva === "lista-compra" && (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">Lista de la Compra</h2>
+          {listaCompra.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
+                <thead>
+                  <tr>
+                    <th className="py-2 px-2 border text-sm">Ingrediente</th>
+                    <th className="py-2 px-2 border text-sm">Cantidad</th>
+                    <th className="py-2 px-2 border text-sm">Comprado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listaCompra.map((item, index) => (
+                    <tr key={index} className={item.comprado ? "bg-green-50" : ""}>
+                      <td className="py-2 px-2 border text-sm">{item.nombre}</td>
+                      <td className="py-2 px-2 border text-sm">
+                        {item.cantidad.toFixed(2)} {item.unidad}
+                      </td>
+                      <td className="py-2 px-2 border text-center">
+                        <input
+                          type="checkbox"
+                          checked={item.comprado}
+                          onChange={() => toggleComprado(item.nombre)}
+                          className="h-4 w-4"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-center text-gray-500">No hay lista de la compra generada. Ve al selector y genera una.</p>
+          )}
         </div>
       )}
     </div>
