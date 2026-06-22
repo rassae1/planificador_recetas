@@ -42,11 +42,11 @@ const recetasIniciales = [
     nombre: "Tortilla rellena de requesón y albahaca",
     tipo: "Comida",
     ingredientes: [
-      { nombre: "Huevos", cantidad: 4, unidad: "ud" },
+      { nombre: "Huevos", cantidad: 3, unidad: "ud" },
       { nombre: "Agua", cantidad: 2, unidad: "cucharadas" },
       { nombre: "Aceite de oliva", cantidad: 5, unidad: "ml" },
       { nombre: "Albahaca fresca", cantidad: 5, unidad: "g" },
-      { nombre: "Requesón o cottage", cantidad: 200, unidad: "g" },
+      { nombre: "Requesón o cottage", cantidad: 150, unidad: "g" },
       { nombre: "Tomates cherry", cantidad: 8, unidad: "ud" },
     ],
     raciones: 1,
